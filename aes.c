@@ -40,8 +40,9 @@ void printState(uint8_t* state) {
 		for(int x = 0; x < 4; x++) {
 			printf("%02x ", state[STIX(x, y)]);
 		}
-		putchar('\n');
+		printf("\n");
 	}
+	printf("\n");
 }
 
 const uint32_t rcon[] = 
@@ -172,18 +173,19 @@ int key_expansion(uint32_t* key, uint32_t* round_keys) {
 void unpack_round_keys(uint32_t* expanded_key, uint8_t* round_keys) {
 	for(int i = 0; i < W; i++){
 		int rnd = i/4;
-		int row =  i % 4;
+		int col =  i % 4;
 
-		round_keys[rnd*16 + 0 + row ] = (expanded_key[i] & 0xff000000) >> 24;
-		round_keys[rnd*16 + 4 + row ] = (expanded_key[i] & 0x00ff0000) >> 16;
-		round_keys[rnd*16 + 8 + row ] = (expanded_key[i] & 0x0000ff00) >> 8;
-		round_keys[rnd*16 + 12 + row] = (expanded_key[i] & 0x000000ff);
+		round_keys[rnd*16 + col*4 + 0 ] = (expanded_key[i] & 0xff000000) >> 24;
+		round_keys[rnd*16 + col*4 + 1 ] = (expanded_key[i] & 0x00ff0000) >> 16;
+		round_keys[rnd*16 + col*4 + 2 ] = (expanded_key[i] & 0x0000ff00) >> 8;
+		round_keys[rnd*16 + col*4 + 3] = (expanded_key[i] & 0x000000ff);
 	}
 }
 
 //xor each byte in the state to the round key
 void add_round_key(uint8_t* state, uint8_t* round_key) {
 	for(int i = 0; i < 4*4; i++) {
+		/*printf("%02x^%02x %02x\n", state[i], round_key[i], state[i] ^ round_key[i]);*/
 		state[i] ^= round_key[i];
 	}
 }
@@ -216,17 +218,19 @@ int aes_encrypt(unsigned char* cipher, const char* input, const char* key_text, 
 	uint8_t round_keys[R*4*4] = {0};
 	unpack_round_keys(word_round_keys, round_keys);
 
-	for(int i = 0; i < R; i++) {
-		printState(round_keys + 4*4*i);
-		putchar('\n');
-	}
+	/*for(int i = 0; i < R; i++) {*/
+		/*printState(round_keys + 4*4*i);*/
+	/*}*/
 
+	//put the message in the state
 	uint8_t state[4*4] = {0};
+	memcpy(state, input, 16);
 
-
-
+	printState(state);
+	printState(round_keys);
 	//BEGIN
 	add_round_key(state, round_keys);
+	printState(state);
 	for(int r = 0; r < ROUNDS; r++) {
 		sub_bytes(state);
 		/*shift_rows();*/
