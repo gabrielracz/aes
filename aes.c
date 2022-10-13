@@ -169,7 +169,7 @@ int key_expansion(uint32_t* key, uint32_t* round_keys) {
 }
 
 
-void unpack_expanded_keys(uint32_t* expanded_key, uint8_t* round_keys) {
+void unpack_round_keys(uint32_t* expanded_key, uint8_t* round_keys) {
 	for(int i = 0; i < W; i++){
 		int rnd = i/4;
 		int row =  i % 4;
@@ -206,16 +206,15 @@ void shift_rows(uint8_t* state) {
 // state[STATEIX(0,3)]
 #define ROUNDS 13
 
-int aes256_encrypt(unsigned char* cipher, const char* input, const char* key_text, size_t keylen) {
+int aes_encrypt(unsigned char* cipher, const char* input, const char* key_text, size_t keylen) {
 	uint32_t packed_key[N] = {0};
 	pack_key(key_text, keylen, packed_key);
 
-	uint32_t expanded_key[W] = {0};
-	key_expansion(packed_key, expanded_key);
+	uint32_t word_round_keys[W] = {0};
+	key_expansion(packed_key, word_round_keys);
 
 	uint8_t round_keys[R*4*4] = {0};
-	unpack_expanded_keys(expanded_key, round_keys);
-
+	unpack_round_keys(word_round_keys, round_keys);
 
 	for(int i = 0; i < R; i++) {
 		printState(round_keys + 4*4*i);

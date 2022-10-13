@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
 	const char* key    = "Thats my Kung Fu";
 
 
-	aes256_encrypt(cipher, sample, key, strlen(key));
+	aes_encrypt(cipher, sample, key, strlen(key));
 
 	printf("%s\n", input);
 
