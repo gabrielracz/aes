@@ -138,7 +138,7 @@ int pack_key(const unsigned char* key, size_t keylen, uint32_t* packed) {
 	return 0;
 }
 
-uint32_t rotword(uint32_t word) {
+uint32_t rotword(uint32_t word, uint8_t bytes) {
 	//one byte circular shift to the left
 	return (word << 8) | (word >> (32 - 8));
 }
@@ -159,7 +159,7 @@ int key_expansion(uint32_t* key, uint32_t* round_keys) {
 		if(i < N){
 			round_keys[i] = key[i];
 		}else if(i % N == 0) {
-			round_keys[i] = round_keys[i-N] ^ subword(rotword(round_keys[i-1])) ^ (rcon[i/N - 1] << 24);
+			round_keys[i] = round_keys[i-N] ^ subword(rotword(round_keys[i-1], 1)) ^ (rcon[i/N - 1] << 24);
 		}else if(N > 6 && i % N == 4) {
 			round_keys[i] = round_keys[i-N] ^ subword(round_keys[i-1]);
 		}else {
@@ -196,9 +196,26 @@ void sub_bytes(uint8_t* state) {
 	}
 }
 
-void shift_rows(uint8_t* state) {
 
+//shift each row by 0, 1, 2, 3
+void shift_rows(uint8_t* state) {
+	//cyclic shift algorithm
+	//naive temp array approach
+	uint8_t tmp[4];
+	for(int i  = 1; i < 4; i++) {
+		tmp[0] = state[4*0 + i];
+		tmp[1] = state[4*1 + i];
+		tmp[2] = state[4*2 + i];
+		tmp[3] = state[4*3 + i];
+
+		/*printf("%x %x %x %x\n\n", tmp[1], tmp[1], tmp[2], tmp[3]);*/
+		state[4*0 + i] = tmp[(0+i) % 4];
+		state[4*1 + i] = tmp[(1+i) % 4];
+		state[4*2 + i] = tmp[(2+i) % 4];
+		state[4*3 + i] = tmp[(3+i) % 4];
+	}
 }
+
 
 //4x4 column-major order array of bytes
 //[b0  b4  b8  b12]
@@ -218,11 +235,7 @@ int aes_encrypt(unsigned char* cipher, const char* input, const char* key_text, 
 	uint8_t round_keys[R*4*4] = {0};
 	unpack_round_keys(word_round_keys, round_keys);
 
-	/*for(int i = 0; i < R; i++) {*/
-		/*printState(round_keys + 4*4*i);*/
-	/*}*/
-
-	//put the message in the state
+	//do this for every 16*8 byte chunk of data from input
 	uint8_t state[4*4] = {0};
 	memcpy(state, input, 16);
 
@@ -230,10 +243,9 @@ int aes_encrypt(unsigned char* cipher, const char* input, const char* key_text, 
 	printState(round_keys);
 	//BEGIN
 	add_round_key(state, round_keys);
-	printState(state);
 	for(int r = 0; r < ROUNDS; r++) {
 		sub_bytes(state);
-		/*shift_rows();*/
+		shift_rows(state);
 		/*mix_columns();*/
 		/*add_round_key();*/
 	}
