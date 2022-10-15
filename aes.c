@@ -8,8 +8,8 @@
 #define R 11
 #define W R*4
 
-#define STIX(_col, _row)      ((_col)*4 + (_row))
-#define RNIX(_ix, _col, _row) ((_ix)*4*4 + (_col)*4 + (_row))
+#define IX2(_col, _row)      ((_col)*4 + (_row))
+#define IX3(_ix, _col, _row) ((_ix)*4*4 + (_col)*4 + (_row))
 
 void printCharBinary(unsigned char num){
 	int bits = sizeof(num) * 8;
@@ -38,7 +38,7 @@ void printIntArrayBinary(int* nums, int len){
 void printState(uint8_t* state) {
 	for(int y = 0; y < 4; y++) {
 		for(int x = 0; x < 4; x++) {
-			printf("%02x ", state[STIX(x, y)]);
+			printf("%02x ", state[IX2(x, y)]);
 		}
 		printf("\n");
 	}
@@ -216,6 +216,43 @@ void shift_rows(uint8_t* state) {
 	}
 }
 
+//matrix vector multiplication
+//  maximum distance seperable matrix:
+//  has some useful diffusion and arithmetic properties
+//  TODO: research math behind it and optimizations
+//  column major (looks transposed)
+/*const uint8_t mds_matrix[16] = {*/
+	/*2, 1, 1, 3,*/
+	/*3, 2, 1, 1,*/
+	/*1, 3, 2, 1,*/
+	/*1, 1, 3, 2*/
+/*};*/
+const uint8_t mds_matrix[16] = {
+	2, 3, 1, 1,
+	1, 2, 3, 1,
+	1, 1, 2, 3,
+	3, 1, 1, 2
+};
+
+void mix_columns(uint8_t* state) {
+	int n, m, sc, sr;
+	for(sc = 0; sc <4; sc++){
+		for(sr = 0; sr < 4; sr++){
+			uint8_t acc = 0;
+			for(n = 0; n < 4; n++){
+				for(m = 0; m < 4; m++){
+					printf("%02x * %02x = %02x\n", state[n*4 + m], mds_matrix[n*4 + m], state[n*4 + m] * mds_matrix[n*4 + m]);
+					acc ^= state[n*4 + m] * mds_matrix[n*4 + m];
+				}
+				printf("ACC: %x\n\n", acc);
+			}
+			/*printf("%x \n", acc);*/
+			state[sc*4 + sr] = acc;
+		}
+		printState(state);
+	}
+}
+
 
 //4x4 column-major order array of bytes
 //[b0  b4  b8  b12]
@@ -239,14 +276,17 @@ int aes_encrypt(unsigned char* cipher, const char* input, const char* key_text, 
 	uint8_t state[4*4] = {0};
 	memcpy(state, input, 16);
 
+	printf("INITIAL STATE\n");
 	printState(state);
+	printf("ROUND KEY\n");
 	printState(round_keys);
 	//BEGIN
 	add_round_key(state, round_keys);
-	for(int r = 0; r < ROUNDS; r++) {
+	for(int r = 0; r < 1; r++) {
 		sub_bytes(state);
 		shift_rows(state);
-		/*mix_columns();*/
+		printState(state);
+		mix_columns(state);
 		/*add_round_key();*/
 	}
 
